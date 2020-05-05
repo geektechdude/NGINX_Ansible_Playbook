@@ -1,0 +1,44 @@
+---
+- name: Install NGINX From Apt-Get
+  become: yes
+  apt:
+    name: nginx
+    state: present
+
+- name: Disable NGINX Default Virtual Host
+  become: yes
+  command:
+    cmd: unlink /etc/nginx/sites-enabled/default
+
+- name: Create NGINX Conf File For Kibana
+  become: yes
+  file:
+    path: /etc/nginx/sites-available/kibana_proxy.conf
+    state: touch
+
+- name: Amend NGINX Conf File
+  become: yes
+  blockinfile:
+      path: /etc/nginx/sites-available/kibana_proxy.conf
+      marker: ""
+      block: |
+        server {
+            listen 80;
+            location / {
+                proxy_pass http://192.168.28.72:5601;
+                proxy_set_header Authorization "";
+                proxy_read_timeout 90s;
+            }
+        }
+
+- name: Link NGINX Kibana Reverse Proxy
+  become: yes
+  command:
+    cmd: ln -s /etc/nginx/sites-available/kibana_proxy.conf /etc/nginx/sites-enabled/kibana_proxy.conf
+
+- name: Make Sure NGINX Service Is Running
+  become: yes
+  service:
+    name: nginx
+    state: restarted
+    enabled: yes
